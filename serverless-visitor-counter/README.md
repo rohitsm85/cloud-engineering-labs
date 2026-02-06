@@ -1,82 +1,208 @@
-# Serverless Visitor Counter on AWS
+# Serverless Visitor Counter (AWS)
 
-## Overview
-This project demonstrates a simple serverless architecture on AWS.
-A static website displays a visitor count that increments every time the page is refreshed.
+A simple serverless application that tracks and displays the number of visitors using
+AWS Lambda, API Gateway, and DynamoDB.
 
-The goal of this project was to understand how multiple AWS services integrate
-and to gain hands-on experience with serverless components.
+This project demonstrates core AWS serverless concepts and is designed as a
+portfolio-ready example for cloud / DevOps interviews.
 
----
+------------------------------------------------------------
+ARCHITECTURE OVERVIEW
+------------------------------------------------------------
 
-## Architecture
+User / Browser
+     |
+     |  HTTP GET /count
+     v
++-------------------+
+|  API Gateway      |
+|  (REST API)       |
++-------------------+
+          |
+          | invokes
+          v
++-------------------+
+|  AWS Lambda       |
+|  (Python)         |
++-------------------+
+          |
+          | UpdateItem
+          v
++-------------------+
+|  DynamoDB         |
+|  visitors table   |
++-------------------+
 
-User Browser  
-→ S3 Static Website  
-→ API Gateway (GET /count)  
-→ AWS Lambda (Python)  
-→ DynamoDB (Visitors table)
+------------------------------------------------------------
+FEATURES
+------------------------------------------------------------
 
----
+- Serverless (no EC2, no servers to manage)
+- Visitor count stored persistently in DynamoDB
+- Stateless Lambda function
+- Public REST endpoint
+- Low-cost, easy to tear down
 
-## AWS Services Used
+------------------------------------------------------------
+TECH STACK
+------------------------------------------------------------
 
-- **Amazon S3**  
-  Hosts the static HTML website.
+- AWS Lambda (Python 3.x)
+- Amazon API Gateway (REST API)
+- Amazon DynamoDB
+- IAM (least-privilege role)
+- GitHub (documentation & version control)
 
-- **Amazon API Gateway**  
-  Exposes a public REST API endpoint to trigger backend logic.
+------------------------------------------------------------
+DYNAMODB DESIGN
+------------------------------------------------------------
 
-- **AWS Lambda**  
-  Runs serverless Python code to increment and retrieve the visitor count.
+Table Name: visitors
 
-- **Amazon DynamoDB**  
-  Stores the visitor count using a simple key-value NoSQL table.
+Primary Key:
+- Partition Key: id (String)
 
-- **AWS IAM**  
-  Grants Lambda permission to access DynamoDB.
+Item Example:
 
-- **Amazon CloudWatch**  
-  Used for logging and debugging Lambda execution.
+id    : "counter"
+count : 5
 
----
+------------------------------------------------------------
+LAMBDA FUNCTION LOGIC
+------------------------------------------------------------
 
-## How It Works
+1. Receive HTTP request from API Gateway
+2. Increment the visitor count in DynamoDB using UpdateItem
+3. Read the updated value
+4. Return the count as a JSON response
 
-1. The user opens the static website hosted on Amazon S3.
-2. JavaScript in the page calls the API Gateway endpoint `/count`.
-3. API Gateway invokes the Lambda function.
-4. Lambda updates the visitor count stored in DynamoDB.
-5. The updated count is returned and displayed on the webpage.
+------------------------------------------------------------
+LAMBDA CODE (REFERENCE)
+------------------------------------------------------------
 
----
+import json
+import boto3
 
-## Challenges & Learnings
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('visitors')
 
-- DynamoDB table names are case-sensitive.
-- All AWS services must be in the same region to communicate.
-- API Gateway requires the full resource path (e.g., `/count`) to avoid
-  "Missing Authentication Token" errors.
-- IAM roles are required for Lambda to access DynamoDB.
-- CloudWatch logs are essential for debugging serverless applications.
+def lambda_handler(event, context):
+    response = table.update_item(
+        Key={'id': 'counter'},
+        UpdateExpression='ADD #c :inc',
+        ExpressionAttributeNames={'#c': 'count'},
+        ExpressionAttributeValues={':inc': 1},
+        ReturnValues='UPDATED_NEW'
+    )
 
----
+    return {
+        'statusCode': 200,
+        'body': json.dumps({
+            'visitors': int(response['Attributes']['count'])
+        })
+    }
 
-## Improvements / Next Steps
+------------------------------------------------------------
+API GATEWAY CONFIGURATION
+------------------------------------------------------------
 
-- Convert infrastructure to Terraform for automated creation and deletion.
-- Add CloudFront in front of S3 for caching and improved security.
-- Secure API Gateway using IAM or API keys.
-- Add monitoring and alarms using CloudWatch.
+- API Type   : REST API
+- Resource   : /count
+- Method     : GET
+- Integration: Lambda (proxy integration enabled)
+- Stage      : prod
 
----
+Invoke URL format:
 
-## Cleanup and Cost Awareness
+https://<api-id>.execute-api.<region>.amazonaws.com/prod/count
 
-All AWS resources created for this project should be deleted after testing
-to avoid incurring costs.  
-A future Terraform version will allow easy creation and teardown using
-`terraform apply` and `terraform destroy`.
+Example Response:
 
+{
+  "visitors": 5
+}
 
+------------------------------------------------------------
+STEP-BY-STEP SETUP (FOR RE-CREATION)
+------------------------------------------------------------
 
+1. Create DynamoDB Table
+   - Table name: visitors
+   - Partition key: id (String)
+
+2. Create IAM Role for Lambda
+   - DynamoDB UpdateItem permission
+   - CloudWatch Logs access
+
+3. Create Lambda Function
+   - Runtime: Python 3.x
+   - Attach IAM role
+   - Add DynamoDB table name correctly (case-sensitive)
+
+4. Test Lambda Manually
+   - Use default test event
+   - Verify count increments
+
+5. Create API Gateway
+   - REST API
+   - Create resource: /count
+   - Create GET method
+   - Integrate with Lambda
+   - Deploy to stage: prod
+
+6. Test Public URL
+   - Append /count (important)
+   - Verify visitor count increments on refresh
+
+------------------------------------------------------------
+COMMON ISSUES & FIXES
+------------------------------------------------------------
+
+Issue: "Missing Authentication Token"
+Fix  : Ensure /count is appended to the invoke URL
+
+Issue: ResourceNotFoundException
+Fix  : DynamoDB table name is case-sensitive (visitors != Visitors)
+
+Issue: Lambda timeout or permission error
+Fix  : Verify IAM role permissions for DynamoDB
+
+------------------------------------------------------------
+CLEANUP (IMPORTANT TO AVOID BILLING)
+------------------------------------------------------------
+
+Delete resources in this order:
+
+1. API Gateway (REST API)
+2. Lambda Function
+3. DynamoDB Table
+4. IAM Role (optional, if not reused)
+
+------------------------------------------------------------
+FUTURE IMPROVEMENTS
+------------------------------------------------------------
+
+- Terraform or CloudFormation for IaC
+- Frontend (HTML + JS) hosted on S3
+- CloudFront CDN
+- Lambda environment variables
+- CI/CD using GitHub Actions
+- Add unit tests for Lambda
+
+------------------------------------------------------------
+WHY THIS PROJECT
+------------------------------------------------------------
+
+This project showcases:
+- Serverless architecture
+- AWS core services
+- Debugging real-world issues
+- Clean documentation
+- Cost-aware cloud practices
+
+------------------------------------------------------------
+AUTHOR
+------------------------------------------------------------
+
+Rohit Mahanteshaiah
+Senior DevOps Engineer
