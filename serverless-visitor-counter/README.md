@@ -200,9 +200,74 @@ This project showcases:
 - Clean documentation
 - Cost-aware cloud practices
 
-------------------------------------------------------------
-AUTHOR
-------------------------------------------------------------
+## Known Issues / Next Steps
 
-Rohit Mahanteshaiah
-Senior DevOps Engineer
+- The visitor counter on the static website currently shows "undefined" instead of the actual number.
+- Likely cause: mismatch between Lambda JSON response and JavaScript parsing.
+- Next steps:
+  - Verify Lambda returns correct JSON with key `visitors`.
+  - Ensure JS fetch parses the response correctly.
+  - Confirm CORS headers are present and API Gateway OPTIONS method works.
+
+
+## Frontend: Static Website on S3
+
+This project includes a simple static website hosted on **Amazon S3**. The website displays the visitor count dynamically by calling the API Gateway endpoint.
+
+### Steps to Create the S3 Website
+
+1. **Create an S3 bucket**
+   - Go to **S3 → Create bucket**
+   - Give it a unique name (e.g., `rohit-visitor-counter`)
+   - Select the same region as your Lambda function (e.g., `us-east-1`)
+   - **Uncheck** "Block all public access" and acknowledge the warning
+
+2. **Enable static website hosting**
+   - Go to the bucket **Properties**
+   - Scroll to **Static website hosting**
+   - Enable hosting
+   - Set **Index document**: `index.html`
+   - Save changes
+   - Copy the **Bucket website endpoint** (this is your frontend URL)
+
+3. **Upload the static website**
+   - Go to **Objects → Upload**
+   - Upload `index.html`
+   - Click **Upload**
+
+4. **Make the bucket public**
+   - Go to **Permissions → Bucket policy**
+   - Paste the following, replacing `<your-bucket-name>`:
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "PublicReadGetObject",
+         "Effect": "Allow",
+         "Principal": "*",
+         "Action": "s3:GetObject",
+         "Resource": "arn:aws:s3:::<your-bucket-name>/*"
+       }
+     ]
+   }
+
+Test the website
+
+Open the Bucket website endpoint in a browser
+
+The page should load (counter may still show "undefined" if Lambda JSON parsing issue exists)
+
+
+---
+
+### Optional additions for interview notes
+
+```md
+### Known Issues / Next Steps
+
+- Visitor counter currently shows "undefined"
+- Cause: mismatch between Lambda response and JS parsing
+- Next: fix JSON key name and ensure CORS headers
+
