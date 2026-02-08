@@ -54,7 +54,6 @@ Step 4: Allow rohit-user to Assume Role
 Policy name: AllowAssume-Human-Admin-Role
 
 Policy JSON:
-
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -65,7 +64,6 @@ Policy JSON:
     }
   ]
 }
-
 
 Attach this policy to the IAM user rohit-user.
 
